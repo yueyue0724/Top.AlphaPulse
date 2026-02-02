@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 背景 -->
+  <rect width="64" height="64" rx="12" fill="#1a1a1a"/>
+  
+  <!-- K线图柱子 -->
+  <rect x="12" y="35" width="6" height="18" fill="#ef4444" rx="1"/>
+  <rect x="22" y="28" width="6" height="25" fill="#22c55e" rx="1"/>
+  <rect x="32" y="32" width="6" height="21" fill="#ef4444" rx="1"/>
+  <rect x="42" y="20" width="6" height="33" fill="#22c55e" rx="1"/>
+  
+  <!-- 上涨趋势线 -->
+  <path d="M 8 45 L 20 38 L 28 35 L 38 28 L 52 15" 
+        stroke="#3b82f6" 
+        stroke-width="2.5" 
+        fill="none" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+  
+  <!-- 箭头 -->
+  <path d="M 52 15 L 48 18 M 52 15 L 52 20" 
+        stroke="#3b82f6" 
+        stroke-width="2.5" 
+        fill="none" 
+        stroke-linecap="round"/>
+</svg>
