@@ -2236,28 +2236,48 @@ export async function fetchThsHot(dataType: '行业板块' | '概念板块' | '�
  * 获取行业板块热榜
  */
 export async function fetchIndustryHotList(limit = 15): Promise<SectorHotData[]> {
-  const data = await fetchThsHot('行业板块', limit);
-  return data.map(item => ({
-    ts_code: item.ts_code,
-    ts_name: item.ts_name,
-    rank: item.rank,
-    pct_change: item.pct_change || 0,
-    hot: item.hot || 0
-  }));
+  const data = await fetchThsHot('行业板块', limit * 2); // 多获取一些用于去重
+  
+  // 按板块名称去重，保留热度最高的
+  const uniqueMap = new Map<string, SectorHotData>();
+  data.forEach(item => {
+    const existing = uniqueMap.get(item.ts_name);
+    if (!existing || (item.hot || 0) > existing.hot) {
+      uniqueMap.set(item.ts_name, {
+        ts_code: item.ts_code,
+        ts_name: item.ts_name,
+        rank: item.rank,
+        pct_change: item.pct_change || 0,
+        hot: item.hot || 0
+      });
+    }
+  });
+  
+  return Array.from(uniqueMap.values()).slice(0, limit);
 }
 
 /**
  * 获取概念板块热榜
  */
 export async function fetchConceptHotList(limit = 15): Promise<SectorHotData[]> {
-  const data = await fetchThsHot('概念板块', limit);
-  return data.map(item => ({
-    ts_code: item.ts_code,
-    ts_name: item.ts_name,
-    rank: item.rank,
-    pct_change: item.pct_change || 0,
-    hot: item.hot || 0
-  }));
+  const data = await fetchThsHot('概念板块', limit * 2); // 多获取一些用于去重
+  
+  // 按板块名称去重，保留热度最高的
+  const uniqueMap = new Map<string, SectorHotData>();
+  data.forEach(item => {
+    const existing = uniqueMap.get(item.ts_name);
+    if (!existing || (item.hot || 0) > existing.hot) {
+      uniqueMap.set(item.ts_name, {
+        ts_code: item.ts_code,
+        ts_name: item.ts_name,
+        rank: item.rank,
+        pct_change: item.pct_change || 0,
+        hot: item.hot || 0
+      });
+    }
+  });
+  
+  return Array.from(uniqueMap.values()).slice(0, limit);
 }
 
 /**

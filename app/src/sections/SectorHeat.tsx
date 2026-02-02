@@ -45,8 +45,8 @@ export function SectorHeat() {
       try {
         const [heatmap, industry, concept, hotStock, kpl] = await Promise.all([
           fetchSectorHeatmapData(20),
-          fetchIndustryHotList(15),
-          fetchConceptHotList(15),
+          fetchIndustryHotList(30),  // 增加获取数量确保有足够涨跌数据
+          fetchConceptHotList(30),   // 增加获取数量确保有足够涨跌数据
           fetchHotStockList(20),
           fetchKplConcepts()
         ]);
@@ -165,7 +165,7 @@ export function SectorHeat() {
                   {industryHotList
                     .filter(s => s.pct_change > 0)
                     .sort((a, b) => b.pct_change - a.pct_change)
-                    .slice(0, 10)
+                    .slice(0, 8)
                     .map((sector, index) => (
                       <div
                         key={sector.ts_code}
@@ -217,7 +217,7 @@ export function SectorHeat() {
                   {industryHotList
                     .filter(s => s.pct_change < 0)
                     .sort((a, b) => a.pct_change - b.pct_change)
-                    .slice(0, 10)
+                    .slice(0, 8)
                     .map((sector, index) => (
                       <div
                         key={sector.ts_code}
@@ -270,7 +270,7 @@ export function SectorHeat() {
                   {conceptHotList
                     .filter(s => s.pct_change > 0)
                     .sort((a, b) => b.pct_change - a.pct_change)
-                    .slice(0, 10)
+                    .slice(0, 8)
                     .map((sector, index) => (
                       <div
                         key={sector.ts_code}
@@ -322,7 +322,7 @@ export function SectorHeat() {
                   {conceptHotList
                     .filter(s => s.pct_change < 0)
                     .sort((a, b) => a.pct_change - b.pct_change)
-                    .slice(0, 10)
+                    .slice(0, 8)
                     .map((sector, index) => (
                       <div
                         key={sector.ts_code}
