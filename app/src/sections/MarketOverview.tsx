@@ -5,11 +5,9 @@ import { MoneyFlowChart } from '@/components/stock/MoneyFlowChart';
 import { MarketSentimentCard } from '@/components/stock/MarketSentiment';
 import { LimitUpStats } from '@/components/stock/LimitUpStats';
 import { SectorList } from '@/components/stock/SectorList';
-import { NorthFlowCard } from '@/components/stock/NorthFlowCard';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Clock, TrendingUp, RefreshCw } from 'lucide-react';
+import { Clock, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn, getChangeColor } from '@/lib/utils';
 import { 

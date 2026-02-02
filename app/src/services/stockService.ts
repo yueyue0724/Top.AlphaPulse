@@ -211,7 +211,9 @@ export async function fetchHotSectors(limit = 10): Promise<SectorData[]> {
     
     // 合并涨跌数据
     type ThsDailyRow = { ts_code: string; trade_date: string; pct_change: number; vol: number; close: number; turnover_rate: number };
-    const allData = [...(upData || []), ...(downData || [])] as ThsDailyRow[];
+    const typedUpData = (upData || []) as ThsDailyRow[];
+    const typedDownData = (downData || []) as ThsDailyRow[];
+    const allData = [...typedUpData, ...typedDownData];
     const latestDate = allData[0]?.trade_date;
     
     // 去重并筛选最新日期
@@ -225,7 +227,7 @@ export async function fetchHotSectors(limit = 10): Promise<SectorData[]> {
         return true;
       });
     
-    console.log(`板块数据: 涨幅 ${upData?.filter(d => d.trade_date === latestDate).length || 0} 条, 跌幅 ${downData?.filter(d => d.trade_date === latestDate).length || 0} 条, 去重后 ${latestData.length} 条`);
+    console.log(`板块数据: 涨幅 ${typedUpData.filter(d => d.trade_date === latestDate).length} 条, 跌幅 ${typedDownData.filter(d => d.trade_date === latestDate).length} 条, 去重后 ${latestData.length} 条`);
     
     // 只查询这些板块的基础信息
     const tsCodes = latestData.map(item => item.ts_code);
