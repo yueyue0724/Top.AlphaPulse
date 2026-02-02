@@ -186,3 +186,15 @@ export interface MarketSentiment {
   avg_change: number;
   limit_up_success_rate: number;
 }
+
+// 开盘啦题材数据
+export interface KplConceptData {
+  ts_code: string;
+  name: string;
+  limit_up_count: number;
+  up_count: number;
+  trade_date?: string;
+  heat_score?: number;
+  leading_stock?: string;
+  leading_change?: number;
+}

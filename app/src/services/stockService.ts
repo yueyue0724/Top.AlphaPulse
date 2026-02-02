@@ -2152,6 +2152,183 @@ export async function fetchHsgtTop10() {
 }
 
 // ===========================================
+// 热榜数据服务（ths_hot表）
+// ===========================================
+
+// 热榜数据类型
+export interface ThsHotItem {
+  trade_date: string;
+  data_type: string;
+  ts_code: string;
+  ts_name: string;
+  rank: number;
+  pct_change: number;
+  hot: number;
+  concept?: string;
+}
+
+// 概念/行业板块热榜数据（用于SectorHeat页面）
+export interface SectorHotData {
+  ts_code: string;
+  ts_name: string;
+  rank: number;
+  pct_change: number;
+  hot: number;
+}
+
+// 热股数据
+export interface HotStockData {
+  ts_code: string;
+  ts_name: string;
+  rank: number;
+  pct_change: number;
+  hot: number;
+  concepts: string[];  // 相关概念
+}
+
+/**
+ * 获取同花顺热榜数据（按类型）
+ * @param dataType 数据类型：行业板块、概念板块、热股 等
+ * @param limit 数量限制
+ */
+export async function fetchThsHot(dataType: '行业板块' | '概念板块' | '热股' | 'ETF', limit = 20): Promise<ThsHotItem[]> {
+  try {
+    // 获取最新交易日的数据
+    const { data, error } = await supabaseStock
+      .from('ths_hot')
+      .select('trade_date, data_type, ts_code, ts_name, rank, pct_change, hot, concept')
+      .eq('data_type', dataType)
+      .order('trade_date', { ascending: false })
+      .order('rank', { ascending: true })
+      .limit(limit * 3); // 多获取一些以确保有足够的最新数据
+    
+    if (error) {
+      console.error('获取热榜数据失败:', error);
+      return [];
+    }
+    
+    if (!data || data.length === 0) {
+      console.warn('未找到热榜数据:', dataType);
+      return [];
+    }
+    
+    // 类型断言
+    const typedData = data as ThsHotItem[];
+    
+    // 找到最新交易日
+    const latestDate = typedData[0].trade_date;
+    console.log(`热榜 [${dataType}] 最新日期: ${latestDate}`);
+    
+    // 只返回最新交易日的数据
+    const latestData = typedData
+      .filter(item => item.trade_date === latestDate)
+      .slice(0, limit);
+    
+    console.log(`热榜 [${dataType}] 返回 ${latestData.length} 条数据`);
+    return latestData;
+  } catch (error) {
+    console.error('获取热榜数据异常:', error);
+    return [];
+  }
+}
+
+/**
+ * 获取行业板块热榜
+ */
+export async function fetchIndustryHotList(limit = 15): Promise<SectorHotData[]> {
+  const data = await fetchThsHot('行业板块', limit);
+  return data.map(item => ({
+    ts_code: item.ts_code,
+    ts_name: item.ts_name,
+    rank: item.rank,
+    pct_change: item.pct_change || 0,
+    hot: item.hot || 0
+  }));
+}
+
+/**
+ * 获取概念板块热榜
+ */
+export async function fetchConceptHotList(limit = 15): Promise<SectorHotData[]> {
+  const data = await fetchThsHot('概念板块', limit);
+  return data.map(item => ({
+    ts_code: item.ts_code,
+    ts_name: item.ts_name,
+    rank: item.rank,
+    pct_change: item.pct_change || 0,
+    hot: item.hot || 0
+  }));
+}
+
+/**
+ * 获取热股榜
+ */
+export async function fetchHotStockList(limit = 20): Promise<HotStockData[]> {
+  const data = await fetchThsHot('热股', limit);
+  return data.map(item => {
+    // 解析 concept 字段（JSON数组字符串）
+    let concepts: string[] = [];
+    if (item.concept) {
+      try {
+        concepts = JSON.parse(item.concept);
+      } catch {
+        // 如果不是JSON，按逗号分割
+        concepts = item.concept.split(',').map(c => c.trim()).filter(Boolean);
+      }
+    }
+    return {
+      ts_code: item.ts_code,
+      ts_name: item.ts_name,
+      rank: item.rank,
+      pct_change: item.pct_change || 0,
+      hot: item.hot || 0,
+      concepts
+    };
+  });
+}
+
+/**
+ * 获取板块热力图数据（合并行业和概念板块）
+ */
+export async function fetchSectorHeatmapData(limit = 30): Promise<{ name: string; value: number; size: number; type: string }[]> {
+  try {
+    // 同时获取行业和概念板块
+    const [industryData, conceptData] = await Promise.all([
+      fetchIndustryHotList(15),
+      fetchConceptHotList(15)
+    ]);
+    
+    // 合并并计算热力图大小
+    const allData = [
+      ...industryData.map(item => ({ ...item, type: 'industry' })),
+      ...conceptData.map(item => ({ ...item, type: 'concept' }))
+    ];
+    
+    // 按涨跌幅绝对值排序，涨幅大的排前面
+    allData.sort((a, b) => {
+      // 先按涨幅排序（涨的排前面）
+      if (a.pct_change > 0 && b.pct_change <= 0) return -1;
+      if (a.pct_change <= 0 && b.pct_change > 0) return 1;
+      // 同为涨或同为跌，按绝对值排序
+      return Math.abs(b.pct_change) - Math.abs(a.pct_change);
+    });
+    
+    // 计算热力图大小（基于热度）
+    const maxHot = Math.max(...allData.map(d => d.hot || 50), 1);
+    
+    return allData.slice(0, limit).map((item) => ({
+      name: item.ts_name,
+      value: item.pct_change,
+      size: Math.max(30, Math.round(item.hot / maxHot * 70 + 30)), // 基于热度的大小
+      type: item.type
+    }));
+  } catch (error) {
+    console.error('获取热力图数据失败:', error);
+    return [];
+  }
+}
+
+// ===========================================
 // 导出便捷方法
 // ===========================================
 
@@ -2180,7 +2357,13 @@ export const stockService = {
   fetchStrategies,
   saveStrategy,
   fetchKplConcepts,
-  fetchHsgtTop10
+  fetchHsgtTop10,
+  // 新增热榜相关
+  fetchThsHot,
+  fetchIndustryHotList,
+  fetchConceptHotList,
+  fetchHotStockList,
+  fetchSectorHeatmapData
 };
 
 export default stockService;
