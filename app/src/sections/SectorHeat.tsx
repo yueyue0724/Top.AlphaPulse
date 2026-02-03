@@ -4,10 +4,10 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Flame, TrendingUp, TrendingDown, Zap, Loader2 } from 'lucide-react';
-import { 
-  fetchIndustryHotList, 
-  fetchConceptHotList, 
-  fetchHotStockList, 
+import {
+  fetchIndustryHotList,
+  fetchConceptHotList,
+  fetchHotStockList,
   fetchSectorHeatmapData,
   fetchKplConcepts,
   type SectorHotData,
@@ -30,14 +30,14 @@ interface KplConceptItem {
 export function SectorHeat() {
   const [activeTab, setActiveTab] = useState('industry');
   const [loading, setLoading] = useState(true);
-  
+
   // 数据状态
   const [heatmapData, setHeatmapData] = useState<{ name: string; value: number; size: number; type: string }[]>([]);
   const [industryHotList, setIndustryHotList] = useState<SectorHotData[]>([]);
   const [conceptHotList, setConceptHotList] = useState<SectorHotData[]>([]);
   const [hotStockList, setHotStockList] = useState<HotStockData[]>([]);
   const [kplConcepts, setKplConcepts] = useState<KplConceptItem[]>([]);
-  
+
   // 加载数据
   useEffect(() => {
     const loadData = async () => {
@@ -50,13 +50,13 @@ export function SectorHeat() {
           fetchHotStockList(20),
           fetchKplConcepts()
         ]);
-        
+
         setHeatmapData(heatmap);
         setIndustryHotList(industry);
         setConceptHotList(concept);
         setHotStockList(hotStock);
         setKplConcepts(kpl);
-        
+
         console.log('板块热点数据加载完成:', {
           heatmap: heatmap.length,
           industry: industry.length,
@@ -70,7 +70,7 @@ export function SectorHeat() {
         setLoading(false);
       }
     };
-    
+
     loadData();
   }, []);
 
@@ -163,9 +163,8 @@ export function SectorHeat() {
               ) : (
                 <div className="space-y-1">
                   {industryHotList
-                    .filter(s => s.pct_change > 0)
                     .sort((a, b) => b.pct_change - a.pct_change)
-                    .slice(0, 8)
+                    .slice(0, 10)
                     .map((sector, index) => (
                       <div
                         key={sector.ts_code}
@@ -185,8 +184,11 @@ export function SectorHeat() {
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="text-right">
-                            <div className="text-[#ff4d4f] font-mono font-medium">
-                              +{sector.pct_change.toFixed(2)}%
+                            <div className={cn(
+                              'font-mono font-medium',
+                              sector.pct_change >= 0 ? 'text-[#ff4d4f]' : 'text-green-600'
+                            )}>
+                              {sector.pct_change >= 0 ? '+' : ''}{sector.pct_change.toFixed(2)}%
                             </div>
                             <div className="text-xs text-slate-600">
                               热度 {sector.hot}
@@ -195,7 +197,7 @@ export function SectorHeat() {
                         </div>
                       </div>
                     ))}
-                  {industryHotList.filter(s => s.pct_change > 0).length === 0 && (
+                  {industryHotList.length === 0 && (
                     <div className="text-center text-slate-500 py-4">暂无上涨行业</div>
                   )}
                 </div>
@@ -215,9 +217,8 @@ export function SectorHeat() {
               ) : (
                 <div className="space-y-1">
                   {industryHotList
-                    .filter(s => s.pct_change < 0)
                     .sort((a, b) => a.pct_change - b.pct_change)
-                    .slice(0, 8)
+                    .slice(0, 10)
                     .map((sector, index) => (
                       <div
                         key={sector.ts_code}
@@ -234,8 +235,11 @@ export function SectorHeat() {
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="text-right">
-                            <div className="text-green-600 font-mono font-medium">
-                              {sector.pct_change.toFixed(2)}%
+                            <div className={cn(
+                              'font-mono font-medium',
+                              sector.pct_change >= 0 ? 'text-[#ff4d4f]' : 'text-green-600'
+                            )}>
+                              {sector.pct_change >= 0 ? '+' : ''}{sector.pct_change.toFixed(2)}%
                             </div>
                             <div className="text-xs text-slate-600">
                               热度 {sector.hot}
@@ -244,7 +248,7 @@ export function SectorHeat() {
                         </div>
                       </div>
                     ))}
-                  {industryHotList.filter(s => s.pct_change < 0).length === 0 && (
+                  {industryHotList.length === 0 && (
                     <div className="text-center text-slate-500 py-4">暂无下跌行业</div>
                   )}
                 </div>
@@ -268,9 +272,8 @@ export function SectorHeat() {
               ) : (
                 <div className="space-y-1">
                   {conceptHotList
-                    .filter(s => s.pct_change > 0)
                     .sort((a, b) => b.pct_change - a.pct_change)
-                    .slice(0, 8)
+                    .slice(0, 10)
                     .map((sector, index) => (
                       <div
                         key={sector.ts_code}
@@ -290,8 +293,11 @@ export function SectorHeat() {
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="text-right">
-                            <div className="text-[#ff4d4f] font-mono font-medium">
-                              +{sector.pct_change.toFixed(2)}%
+                            <div className={cn(
+                              'font-mono font-medium',
+                              sector.pct_change >= 0 ? 'text-[#ff4d4f]' : 'text-green-600'
+                            )}>
+                              {sector.pct_change >= 0 ? '+' : ''}{sector.pct_change.toFixed(2)}%
                             </div>
                             <div className="text-xs text-slate-600">
                               热度 {sector.hot}
@@ -300,7 +306,7 @@ export function SectorHeat() {
                         </div>
                       </div>
                     ))}
-                  {conceptHotList.filter(s => s.pct_change > 0).length === 0 && (
+                  {conceptHotList.length === 0 && (
                     <div className="text-center text-slate-500 py-4">暂无上涨概念</div>
                   )}
                 </div>
@@ -320,9 +326,8 @@ export function SectorHeat() {
               ) : (
                 <div className="space-y-1">
                   {conceptHotList
-                    .filter(s => s.pct_change < 0)
                     .sort((a, b) => a.pct_change - b.pct_change)
-                    .slice(0, 8)
+                    .slice(0, 10)
                     .map((sector, index) => (
                       <div
                         key={sector.ts_code}
@@ -339,8 +344,11 @@ export function SectorHeat() {
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="text-right">
-                            <div className="text-green-600 font-mono font-medium">
-                              {sector.pct_change.toFixed(2)}%
+                            <div className={cn(
+                              'font-mono font-medium',
+                              sector.pct_change >= 0 ? 'text-[#ff4d4f]' : 'text-green-600'
+                            )}>
+                              {sector.pct_change >= 0 ? '+' : ''}{sector.pct_change.toFixed(2)}%
                             </div>
                             <div className="text-xs text-slate-600">
                               热度 {sector.hot}
@@ -349,7 +357,7 @@ export function SectorHeat() {
                         </div>
                       </div>
                     ))}
-                  {conceptHotList.filter(s => s.pct_change < 0).length === 0 && (
+                  {conceptHotList.length === 0 && (
                     <div className="text-center text-slate-500 py-4">暂无下跌概念</div>
                   )}
                 </div>

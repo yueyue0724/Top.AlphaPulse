@@ -6,18 +6,20 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Newspaper, 
-  Zap, 
-  Building2, 
-  FileText, 
+import {
+  Newspaper,
+  Zap,
+  Building2,
+  FileText,
   Calendar,
   RefreshCw,
   ChevronDown,
-  Filter,
   Radio,
   Wifi,
-  WifiOff
+  WifiOff,
+  X,
+  ZoomIn,
+  Image as ImageIcon
 } from 'lucide-react';
 import { fetchRealTimeNews, NEWS_SOURCES } from '@/services/stockService';
 import { subscribeToAllNewsTables, getActiveSubscriptionCount } from '@/lib/supabase';
@@ -64,6 +66,11 @@ const mockCalendar = [
 
 // 新闻源颜色映射
 const sourceColorMap: Record<string, string> = {
+  // 大V渠道 - 使用醒目颜色
+  snowball_influencer: 'bg-blue-500 text-white border-blue-600',
+  weibo_influencer: 'bg-orange-500 text-white border-orange-600',
+
+  // 主流平台
   cls: 'bg-red-100 text-red-700 border-red-200',
   eastmoney: 'bg-teal-100 text-teal-700 border-teal-200',
   jin10: 'bg-yellow-100 text-yellow-700 border-yellow-200',
@@ -75,6 +82,13 @@ const sourceColorMap: Record<string, string> = {
   ifeng: 'bg-orange-100 text-orange-700 border-orange-200',
   jin10qihuo: 'bg-amber-100 text-amber-700 border-amber-200',
   chinastar: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+
+  // 其他平台
+  snowball: 'bg-blue-100 text-blue-700 border-blue-200',
+  wallstreetcn: 'bg-slate-100 text-slate-700 border-slate-200',
+  xuangutong: 'bg-violet-100 text-violet-700 border-violet-200',
+  yicai: 'bg-sky-100 text-sky-700 border-sky-200',
+  yuncaijing: 'bg-cyan-100 text-cyan-700 border-cyan-200',
 };
 
 export function NewsCenter() {
@@ -86,8 +100,11 @@ export function NewsCenter() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [currentLimit, setCurrentLimit] = useState(50);
-  const [showSourceFilter, setShowSourceFilter] = useState(false);
-  
+
+  // 模态框状态
+  const [selectedNews, setSelectedNews] = useState<FlashNewsItem | null>(null);
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
   // Realtime 相关状态
   const [realtimeEnabled, setRealtimeEnabled] = useState(true);
   const [realtimeConnected, setRealtimeConnected] = useState(false);
@@ -97,6 +114,11 @@ export function NewsCenter() {
 
   // 表名到 sourceKey 的映射
   const tableToSourceKey: Record<string, string> = {
+    // 大V渠道
+    'snowball_influencer_tb': 'snowball_influencer',
+    'weibo_influencer_tb': 'weibo_influencer',
+
+    // 主流平台
     'clscntelegraph_tb': 'cls',
     'eastmoney724_tb': 'eastmoney',
     'jin10data724_tb': 'jin10',
@@ -108,6 +130,13 @@ export function NewsCenter() {
     'ifeng724_tb': 'ifeng',
     'jin10qihuo724_tb': 'jin10qihuo',
     'chinastarmarkettelegraph724_tb': 'chinastar',
+
+    // 其他平台
+    'snowball724_tb': 'snowball',
+    'wallstreetcn_tb': 'wallstreetcn',
+    'xuangutong724_tb': 'xuangutong',
+    'yicai724_tb': 'yicai',
+    'yuncaijing724_tb': 'yuncaijing',
   };
 
   // 格式化时间戳
@@ -153,9 +182,9 @@ export function NewsCenter() {
       const newData = payload.new as Record<string, unknown>;
       const sourceKey = tableToSourceKey[tableName] || 'unknown';
       const sourceName = NEWS_SOURCES.find(s => s.key === sourceKey)?.name || tableName;
-      
+
       const { time, date } = formatNewsTime(newData.display_time as number);
-      
+
       const newsItem: FlashNewsItem = {
         id: `${sourceKey}_${newData.id}`,
         title: (newData.title as string) || '',
@@ -179,7 +208,7 @@ export function NewsCenter() {
       // 添加到实时新闻队列
       setRealtimeNews(prev => [newsItem, ...prev].slice(0, 50));
       setNewNewsCount(prev => prev + 1);
-      
+
       console.log('[Realtime] 收到新新闻:', newsItem.title || newsItem.content.substring(0, 50));
     });
 
@@ -199,7 +228,7 @@ export function NewsCenter() {
   // 合并实时新闻到主列表
   const mergeRealtimeNews = useCallback(() => {
     if (realtimeNews.length === 0) return;
-    
+
     setFlashNews(prev => {
       // 合并并去重
       const merged = [...realtimeNews, ...prev];
@@ -213,7 +242,7 @@ export function NewsCenter() {
       unique.sort((a, b) => b.display_time - a.display_time);
       return unique;
     });
-    
+
     setRealtimeNews([]);
     setNewNewsCount(0);
   }, [realtimeNews]);
@@ -233,7 +262,7 @@ export function NewsCenter() {
         limit: 30, // 每个源获取30条
         totalLimit: limit
       });
-      
+
       setFlashNews(data);
       setHasMore(data.length >= limit);
       setCurrentLimit(limit);
@@ -248,7 +277,7 @@ export function NewsCenter() {
   // 加载更多
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore) return;
-    
+
     setLoadingMore(true);
     try {
       const newLimit = currentLimit + 50;
@@ -258,7 +287,7 @@ export function NewsCenter() {
         limit: 30,
         totalLimit: newLimit
       });
-      
+
       setFlashNews(data);
       setHasMore(data.length >= newLimit);
       setCurrentLimit(newLimit);
@@ -384,43 +413,18 @@ export function NewsCenter() {
 
         <TabsContent value="flash" className="mt-4">
           <Card className="p-4 bg-white border-slate-200">
-            {/* 头部：标题 + 筛选 + 刷新 */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-yellow-600" />
-                <h3 className="text-lg font-semibold text-slate-900">7×24小时快讯</h3>
-                <span className="text-xs text-slate-500">
-                  {flashNews.length > 0 && `(${flashNews.length}条)`}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                {/* 筛选按钮 */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowSourceFilter(!showSourceFilter)}
-                  className="gap-1"
-                >
-                  <Filter className="w-4 h-4" />
-                  {selectedSource === 'all' ? '全部来源' : NEWS_SOURCES.find(s => s.key === selectedSource)?.name}
-                </Button>
-                {/* 刷新按钮 */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => loadNews(true, currentLimit)}
-                  disabled={refreshing}
-                  className="gap-1"
-                >
-                  <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
-                  刷新
-                </Button>
-              </div>
+            {/* 头部：标题 */}
+            <div className="flex items-center gap-2 mb-4">
+              <Zap className="w-5 h-5 text-yellow-600" />
+              <h3 className="text-lg font-semibold text-slate-900">7×24小时快讯</h3>
+              <span className="text-xs text-slate-500">
+                {flashNews.length > 0 && `(${flashNews.length}条)`}
+              </span>
             </div>
 
             {/* 新消息提示条 */}
             {newNewsCount > 0 && (
-              <div 
+              <div
                 className="mb-4 p-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-center gap-2 cursor-pointer hover:bg-blue-100 transition-colors"
                 onClick={mergeRealtimeNews}
               >
@@ -431,36 +435,34 @@ export function NewsCenter() {
               </div>
             )}
 
-            {/* 来源筛选器 */}
-            {showSourceFilter && (
-              <div className="flex flex-wrap gap-2 mb-4 p-3 bg-slate-50 rounded-lg">
+            {/* 来源筛选器 - 默认展示 */}
+            <div className="flex flex-wrap gap-2 mb-4 p-3 bg-slate-50 rounded-lg">
+              <Badge
+                className={cn(
+                  'cursor-pointer transition-colors',
+                  selectedSource === 'all'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                )}
+                onClick={() => setSelectedSource('all')}
+              >
+                全部
+              </Badge>
+              {NEWS_SOURCES.map((source) => (
                 <Badge
+                  key={source.key}
                   className={cn(
                     'cursor-pointer transition-colors',
-                    selectedSource === 'all'
+                    selectedSource === source.key
                       ? 'bg-blue-600 text-white'
-                      : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                      : sourceColorMap[source.key] || 'bg-slate-200 text-slate-700 hover:bg-slate-300'
                   )}
-                  onClick={() => setSelectedSource('all')}
+                  onClick={() => setSelectedSource(source.key)}
                 >
-                  全部
+                  {source.name}
                 </Badge>
-                {NEWS_SOURCES.map((source) => (
-                  <Badge
-                    key={source.key}
-                    className={cn(
-                      'cursor-pointer transition-colors',
-                      selectedSource === source.key
-                        ? 'bg-blue-600 text-white'
-                        : sourceColorMap[source.key] || 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                    )}
-                    onClick={() => setSelectedSource(source.key)}
-                  >
-                    {source.name}
-                  </Badge>
-                ))}
-              </div>
-            )}
+              ))}
+            </div>
 
             {/* 新闻列表 */}
             <ScrollArea className="h-[550px]">
@@ -485,8 +487,8 @@ export function NewsCenter() {
                 <div className="flex flex-col items-center justify-center h-64 text-slate-500">
                   <Newspaper className="w-12 h-12 mb-2 opacity-50" />
                   <p>暂无新闻数据</p>
-                  <Button 
-                    variant="link" 
+                  <Button
+                    variant="link"
                     onClick={() => loadNews(true, 50)}
                     className="mt-2"
                   >
@@ -504,13 +506,14 @@ export function NewsCenter() {
                         <span className="text-xs font-medium text-slate-500 px-2">{date}</span>
                         <div className="h-px flex-1 bg-slate-200" />
                       </div>
-                      
+
                       {/* 该日期下的新闻 */}
                       <div className="space-y-2">
                         {items.map((news) => (
                           <div
                             key={news.id}
-                            className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer"
+                            className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer hover:shadow-sm"
+                            onClick={() => setSelectedNews(news)}
                           >
                             <div className="flex flex-col items-center min-w-14">
                               <span className="text-sm font-mono text-slate-600">{news.time}</span>
@@ -528,12 +531,43 @@ export function NewsCenter() {
                                   )}
                                 </>
                               ) : (
-                                <p className="text-sm text-slate-900">{news.content}</p>
+                                <p className="text-sm text-slate-900 line-clamp-3">{news.content}</p>
                               )}
-                              {/* 来源 */}
+
+                              {/* 图片缩略图 */}
+                              {news.images && news.images.length > 0 && (
+                                <div className="flex items-center gap-2 mt-2">
+                                  {news.images.slice(0, 3).map((img, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="relative w-12 h-12 rounded overflow-hidden border border-slate-200 flex-shrink-0"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setZoomedImage(img);
+                                      }}
+                                    >
+                                      <img
+                                        src={img}
+                                        alt=""
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+                                        }}
+                                      />
+                                    </div>
+                                  ))}
+                                  {news.images.length > 3 && (
+                                    <div className="w-12 h-12 rounded bg-slate-200 flex items-center justify-center flex-shrink-0">
+                                      <span className="text-xs text-slate-600">+{news.images.length - 3}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* 来源和图片数量 */}
                               <div className="flex items-center gap-2 mt-1">
-                                <Badge 
-                                  variant="outline" 
+                                <Badge
+                                  variant="outline"
                                   className={cn(
                                     'text-xs',
                                     sourceColorMap[news.sourceKey] || 'bg-slate-100 text-slate-600'
@@ -541,6 +575,12 @@ export function NewsCenter() {
                                 >
                                   {news.source}
                                 </Badge>
+                                {news.images && news.images.length > 0 && (
+                                  <span className="text-xs text-slate-400 flex items-center gap-1">
+                                    <ImageIcon className="w-3 h-3" />
+                                    {news.images.length}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -548,7 +588,7 @@ export function NewsCenter() {
                       </div>
                     </div>
                   ))}
-                  
+
                   {/* 加载更多 */}
                   {hasMore && (
                     <div className="flex justify-center py-4">
@@ -639,8 +679,8 @@ export function NewsCenter() {
                       <Badge className={cn(
                         'ml-2',
                         report.rating === '买入' ? 'bg-red-100 text-red-700' :
-                        report.rating === '推荐' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-slate-100 text-slate-600'
+                          report.rating === '推荐' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-slate-100 text-slate-600'
                       )}>
                         {report.rating}
                       </Badge>
@@ -689,16 +729,16 @@ export function NewsCenter() {
                       <Badge className={cn(
                         'text-xs',
                         event.type === '宏观' ? 'bg-red-100 text-red-700' :
-                        event.type === '财报' ? 'bg-blue-100 text-blue-700' :
-                        event.type === '新股' ? 'bg-green-100 text-green-700' :
-                        'bg-slate-100 text-slate-600'
+                          event.type === '财报' ? 'bg-blue-100 text-blue-700' :
+                            event.type === '新股' ? 'bg-green-100 text-green-700' :
+                              'bg-slate-100 text-slate-600'
                       )}>
                         {event.type}
                       </Badge>
                       <Badge className={cn(
                         'text-xs',
                         event.importance === 'high' ? 'bg-red-100 text-red-700' :
-                        'bg-slate-100 text-slate-600'
+                          'bg-slate-100 text-slate-600'
                       )}>
                         {event.importance === 'high' ? '重要' : '普通'}
                       </Badge>
@@ -710,6 +750,110 @@ export function NewsCenter() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* 新闻详情模态框 */}
+      {selectedNews && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedNews(null)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 头部 */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-200">
+              <div className="flex items-center gap-3">
+                <Badge
+                  className={cn(
+                    'text-xs',
+                    sourceColorMap[selectedNews.sourceKey] || 'bg-slate-100 text-slate-600'
+                  )}
+                >
+                  {selectedNews.source}
+                </Badge>
+                <span className="text-sm text-slate-500">{selectedNews.date} {selectedNews.time}</span>
+                <Badge className={cn('text-xs', getImportanceColor(selectedNews.importance))}>
+                  {selectedNews.importance === 'high' ? '重要' : '普通'}
+                </Badge>
+              </div>
+              <button
+                onClick={() => setSelectedNews(null)}
+                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+
+            {/* 内容 */}
+            <ScrollArea className="max-h-[calc(85vh-120px)]">
+              <div className="p-6">
+                {selectedNews.title && (
+                  <h2 className="text-xl font-bold text-slate-900 mb-4">{selectedNews.title}</h2>
+                )}
+                <p className="text-base text-slate-700 leading-relaxed whitespace-pre-wrap">
+                  {selectedNews.content}
+                </p>
+
+                {/* 图片展示 */}
+                {selectedNews.images && selectedNews.images.length > 0 && (
+                  <div className="mt-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ImageIcon className="w-4 h-4 text-slate-500" />
+                      <span className="text-sm text-slate-500">相关图片 ({selectedNews.images.length})</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {selectedNews.images.map((img, idx) => (
+                        <div
+                          key={idx}
+                          className="relative group cursor-pointer rounded-lg overflow-hidden border border-slate-200"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setZoomedImage(img);
+                          }}
+                        >
+                          <img
+                            src={img}
+                            alt={`图片 ${idx + 1}`}
+                            className="w-full h-40 object-cover transition-transform group-hover:scale-105"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                            <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+        </div>
+      )}
+
+      {/* 图片放大模态框 */}
+      {zoomedImage && (
+        <div
+          className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4"
+          onClick={() => setZoomedImage(null)}
+        >
+          <button
+            className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+            onClick={() => setZoomedImage(null)}
+          >
+            <X className="w-6 h-6 text-white" />
+          </button>
+          <img
+            src={zoomedImage}
+            alt="放大图片"
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }

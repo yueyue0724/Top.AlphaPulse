@@ -2,17 +2,18 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Search, 
-  Home, 
-  TrendingUp, 
-  BarChart3, 
-  Filter, 
-  Brain, 
-  Newspaper, 
+import {
+  Search,
+  Home,
+  TrendingUp,
+  BarChart3,
+  Filter,
+  Brain,
+  Newspaper,
   User,
   Menu,
-  X
+  X,
+  Trophy
 } from 'lucide-react';
 
 interface NavigationProps {
@@ -24,6 +25,7 @@ const navItems = [
   { id: 'market', label: '市场概览', icon: Home },
   { id: 'stock', label: '个股详情', icon: TrendingUp },
   { id: 'sector', label: '板块热点', icon: BarChart3 },
+  { id: 'dragon', label: '龙虎榜', icon: Trophy },
   { id: 'screener', label: '智能选股', icon: Filter },
   { id: 'ai', label: 'AI分析', icon: Brain },
   { id: 'news', label: '资讯中心', icon: Newspaper },
@@ -42,7 +44,7 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
             <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-white" />
             </div>
-            <span className="text-lg font-bold text-slate-900 hidden sm:block">股票数据看板</span>
+            <span className="text-lg font-bold text-slate-900 hidden sm:block">TOP.AlphaPulse</span>
           </div>
 
           {/* Desktop Navigation */}
@@ -56,8 +58,8 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
                   size="sm"
                   className={cn(
                     'gap-1.5',
-                    activeTab === item.id 
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                    activeTab === item.id
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
                       : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
                   )}
                   onClick={() => onTabChange(item.id)}
@@ -84,9 +86,9 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
             <Button variant="ghost" size="icon" className="text-slate-600 hover:text-slate-900">
               <User className="w-5 h-5" />
             </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="lg:hidden text-slate-600 hover:text-slate-900"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
@@ -107,8 +109,8 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
                     variant={activeTab === item.id ? 'default' : 'ghost'}
                     className={cn(
                       'justify-start gap-2',
-                      activeTab === item.id 
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                      activeTab === item.id
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
                         : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
                     )}
                     onClick={() => {

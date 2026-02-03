@@ -97,7 +97,7 @@ export async function checkSupabaseConnection(): Promise<{
     checkStockConnection(),
     checkNewsConnection()
   ]);
-  
+
   return {
     stock,
     news,
@@ -113,17 +113,29 @@ export async function checkSupabaseConnection(): Promise<{
  * 新闻表配置（用于 Realtime 订阅）
  */
 export const NEWS_TABLES = [
-  'clscntelegraph_tb',      // 财联社
-  'eastmoney724_tb',        // 东方财富
-  'jin10data724_tb',        // 金十数据
-  'gelonghui724_tb',        // 格隆汇
-  'sina724_tb',             // 新浪财经
-  'jqka724_tb',             // 同花顺
-  'jrj724_tb',              // 金融界
-  'futunn724_tb',           // 富途牛牛
-  'ifeng724_tb',            // 凤凰财经
-  'jin10qihuo724_tb',       // 金十期货
+  // 大V渠道 - 优先级高
+  'snowball_influencer_tb',  // 雪球大V
+  'weibo_influencer_tb',     // 微博大V
+
+  // 主流财经平台
+  'clscntelegraph_tb',       // 财联社
+  'eastmoney724_tb',         // 东方财富
+  'jin10data724_tb',         // 金十数据
+  'gelonghui724_tb',         // 格隆汇
+  'sina724_tb',              // 新浪财经
+  'jqka724_tb',              // 同花顺
+  'jrj724_tb',               // 金融界
+  'futunn724_tb',            // 富途牛牛
+  'ifeng724_tb',             // 凤凰财经
+  'jin10qihuo724_tb',        // 金十期货
   'chinastarmarkettelegraph724_tb', // 科创板日报
+
+  // 其他平台
+  'snowball724_tb',          // 雪球
+  'wallstreetcn_tb',         // 华尔街见闻
+  'xuangutong724_tb',        // 选股通
+  'yicai724_tb',             // 第一财经
+  'yuncaijing724_tb',        // 云财经
 ];
 
 // 存储活跃的 Realtime 订阅通道

@@ -7,7 +7,7 @@ export interface Database {
       // =============================================
       // 股票基础数据表
       // =============================================
-      
+
       // 股票基础信息表
       stock_basic: {
         Row: {
@@ -307,6 +307,78 @@ export interface Database {
       };
 
       // =============================================
+      // 龙虎榜数据表
+      // =============================================
+
+      // 龙虎榜每日明细
+      top_list: {
+        Row: {
+          trade_date: string;
+          ts_code: string;
+          name: string;
+          close: number | null;
+          pct_change: number | null;
+          turnover_rate: number | null;
+          amount: number | null;
+          l_sell: number | null;
+          l_buy: number | null;
+          l_amount: number | null;
+          net_amount: number | null;
+          net_rate: number | null;
+          amount_rate: number | null;
+          float_values: number | null;
+          reason: string | null;
+        };
+        Insert: {
+          trade_date: string;
+          ts_code: string;
+          name: string;
+          close?: number | null;
+          pct_change?: number | null;
+          turnover_rate?: number | null;
+          amount?: number | null;
+          l_sell?: number | null;
+          l_buy?: number | null;
+          l_amount?: number | null;
+          net_amount?: number | null;
+          net_rate?: number | null;
+          amount_rate?: number | null;
+          float_values?: number | null;
+          reason?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['top_list']['Insert']>;
+      };
+
+      // 龙虎榜机构明细
+      top_inst: {
+        Row: {
+          trade_date: string;
+          ts_code: string;
+          exalter: string;
+          side: string; // '0'-买入, '1'-卖出
+          buy: number | null;
+          buy_rate: number | null;
+          sell: number | null;
+          sell_rate: number | null;
+          net_buy: number | null;
+          reason: string | null;
+        };
+        Insert: {
+          trade_date: string;
+          ts_code: string;
+          exalter: string;
+          side: string;
+          buy?: number | null;
+          buy_rate?: number | null;
+          sell?: number | null;
+          sell_rate?: number | null;
+          net_buy?: number | null;
+          reason?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['top_inst']['Insert']>;
+      };
+
+      // =============================================
       // 资金流向数据表
       // =============================================
 
@@ -517,6 +589,8 @@ export type ThsDailyRow = Database['public']['Tables']['ths_daily']['Row'];
 export type ThsMemberRow = Database['public']['Tables']['ths_member']['Row'];
 export type LimitListDRow = Database['public']['Tables']['limit_list_d']['Row'];
 export type StkLimitRow = Database['public']['Tables']['stk_limit']['Row'];
+export type TopListRow = Database['public']['Tables']['top_list']['Row'];
+export type TopInstRow = Database['public']['Tables']['top_inst']['Row'];
 export type MoneyflowRow = Database['public']['Tables']['moneyflow']['Row'];
 export type HsgtTop10Row = Database['public']['Tables']['hsgt_top10']['Row'];
 export type KplConceptRow = Database['public']['Tables']['kpl_concept']['Row'];

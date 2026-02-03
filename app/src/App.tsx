@@ -6,6 +6,7 @@ import { SectorHeat } from '@/sections/SectorHeat';
 import { StockScreener } from '@/sections/StockScreener';
 import { AIAnalysis } from '@/sections/AIAnalysis';
 import { NewsCenter } from '@/sections/NewsCenter';
+import { DragonTigerPage } from '@/sections/DragonTigerPage';
 import { Toaster } from '@/components/ui/sonner';
 
 function App() {
@@ -19,6 +20,8 @@ function App() {
         return <StockDetail />;
       case 'sector':
         return <SectorHeat />;
+      case 'dragon':
+        return <DragonTigerPage />;
       case 'screener':
         return <StockScreener />;
       case 'ai':
