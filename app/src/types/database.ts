@@ -547,6 +547,43 @@ export interface Database {
       };
 
       // =============================================
+      // 新股信息表
+      // =============================================
+
+      // 新股上市信息表（用于降级获取新上市股票名称）
+      new_share: {
+        Row: {
+          ts_code: string;
+          sub_code: string | null;
+          name: string;
+          ipo_date: string | null;
+          issue_date: string | null;
+          amount: number | null;
+          market_amount: number | null;
+          price: number | null;
+          pe: number | null;
+          limit_amount: number | null;
+          funds: number | null;
+          ballot: number | null;
+        };
+        Insert: {
+          ts_code: string;
+          sub_code?: string | null;
+          name: string;
+          ipo_date?: string | null;
+          issue_date?: string | null;
+          amount?: number | null;
+          market_amount?: number | null;
+          price?: number | null;
+          pe?: number | null;
+          limit_amount?: number | null;
+          funds?: number | null;
+          ballot?: number | null;
+        };
+        Update: Partial<Database['public']['Tables']['new_share']['Insert']>;
+      };
+
+      // =============================================
       // 选股策略表（可能需要创建）
       // =============================================
 
@@ -595,4 +632,5 @@ export type MoneyflowRow = Database['public']['Tables']['moneyflow']['Row'];
 export type HsgtTop10Row = Database['public']['Tables']['hsgt_top10']['Row'];
 export type KplConceptRow = Database['public']['Tables']['kpl_concept']['Row'];
 export type KplListRow = Database['public']['Tables']['kpl_list']['Row'];
+export type NewShareRow = Database['public']['Tables']['new_share']['Row'];
 export type PickerStrategyRow = Database['public']['Tables']['picker_strategy']['Row'];

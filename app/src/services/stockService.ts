@@ -68,6 +68,42 @@ function getRecentTradeDates(count = 5): string[] {
   return dates;
 }
 
+/**
+ * 从 new_share 表批量获取新股名称
+ * 用于降级获取 stock_basic 表中没有的新上市股票名称
+ */
+async function fetchNewShareNames(tsCodes: string[]): Promise<Map<string, { name: string; industry: string }>> {
+  const nameMap = new Map<string, { name: string; industry: string }>();
+
+  if (tsCodes.length === 0) return nameMap;
+
+  try {
+    const { data, error } = await supabaseStock
+      .from('new_share')
+      .select('ts_code, name')
+      .in('ts_code', tsCodes);
+
+    if (error) {
+      console.warn('从 new_share 表获取新股名称失败:', error);
+      return nameMap;
+    }
+
+    if (data && data.length > 0) {
+      data.forEach((item: { ts_code: string; name: string }) => {
+        nameMap.set(item.ts_code, {
+          name: item.name,
+          industry: '新股'
+        });
+      });
+      console.log(`从 new_share 表获取到 ${data.length} 只新股的名称`);
+    }
+  } catch (error) {
+    console.error('批量获取新股名称失败:', error);
+  }
+
+  return nameMap;
+}
+
 // ===========================================
 // 指数数据服务
 // ===========================================
@@ -1634,6 +1670,14 @@ export async function fetchStockListWithQuotes(params: {
         (stockBasicData || []).map((item: { ts_code: string }) => [item.ts_code, item])
       );
 
+      // 找出 stock_basic 中没有的股票代码（可能是新股）
+      const missingCodes = tsCodes.filter(code => !stockBasicMap.has(code));
+
+      // 从 new_share 表获取新股名称
+      const newShareNameMap = missingCodes.length > 0
+        ? await fetchNewShareNames(missingCodes)
+        : new Map<string, { name: string; industry: string }>();
+
       // 按 dailyData 的顺序合并数据（保持排序）
       const result: StockQuoteItem[] = dailyData.map((daily: {
         ts_code: string;
@@ -1661,11 +1705,14 @@ export async function fetchStockListWithQuotes(params: {
           industry: string | null;
         } | undefined;
 
+        // 降级获取新股名称
+        const newShareInfo = newShareNameMap.get(daily.ts_code);
+
         return {
           ts_code: daily.ts_code,
           symbol: stockBasic?.symbol || daily.ts_code.split('.')[0],
-          name: stockBasic?.name || daily.ts_code,
-          industry: stockBasic?.industry || '',
+          name: stockBasic?.name || newShareInfo?.name || daily.ts_code,
+          industry: stockBasic?.industry || newShareInfo?.industry || '',
           close: daily.close || 0,
           change: daily.change || 0,
           pct_chg: daily.pct_chg || 0,
@@ -1761,6 +1808,14 @@ export async function fetchStockListWithQuotes(params: {
         (stockBasicData || []).map((item: { ts_code: string }) => [item.ts_code, item])
       );
 
+      // 找出 stock_basic 中没有的股票代码（可能是新股）
+      const missingCodes = tsCodes.filter(code => !stockBasicMap.has(code));
+
+      // 从 new_share 表获取新股名称
+      const newShareNameMap = missingCodes.length > 0
+        ? await fetchNewShareNames(missingCodes)
+        : new Map<string, { name: string; industry: string }>();
+
       // 按 basicData 的顺序合并数据（保持排序）
       const result: StockQuoteItem[] = basicData.map((basic: {
         ts_code: string;
@@ -1788,11 +1843,14 @@ export async function fetchStockListWithQuotes(params: {
           industry: string | null;
         } | undefined;
 
+        // 降级获取新股名称
+        const newShareInfo = newShareNameMap.get(basic.ts_code);
+
         return {
           ts_code: basic.ts_code,
           symbol: stockBasic?.symbol || basic.ts_code.split('.')[0],
-          name: stockBasic?.name || basic.ts_code,
-          industry: stockBasic?.industry || '',
+          name: stockBasic?.name || newShareInfo?.name || basic.ts_code,
+          industry: stockBasic?.industry || newShareInfo?.industry || '',
           close: daily?.close || basic.close || 0,
           change: daily?.change || 0,
           pct_chg: daily?.pct_chg || 0,
@@ -1955,6 +2013,7 @@ export async function fetchKLineData(tsCode: string, days = 60) {
 
 /**
  * 获取股票完整详情（基本信息 + 行情数据 + 估值指标）
+ * 支持新股降级：当 stock_basic 表中无数据时，从 new_share 表获取名称
  */
 export async function fetchStockFullDetail(tsCode: string) {
   try {
@@ -1982,7 +2041,7 @@ export async function fetchStockFullDetail(tsCode: string) {
         .limit(1)
     ]);
 
-    const basic = basicResult.data as {
+    let basic = basicResult.data as {
       ts_code: string;
       symbol: string;
       name: string;
@@ -2025,6 +2084,47 @@ export async function fetchStockFullDetail(tsCode: string) {
     };
     const dailyBasic = (dailyBasicResult.data as DailyBasicRow[] | null)?.[0];
 
+    // 降级处理：如果 stock_basic 表中没有数据，尝试从 new_share 表获取新股信息
+    if (!basic) {
+      console.warn(`stock_basic 表中未找到 ${tsCode}，尝试从 new_share 表获取新股信息...`);
+
+      const { data: newShareData, error: newShareError } = await supabaseStock
+        .from('new_share')
+        .select('ts_code, name, issue_date, price, pe')
+        .eq('ts_code', tsCode)
+        .single();
+
+      if (newShareError) {
+        console.warn('从 new_share 表获取新股信息失败:', newShareError);
+      }
+
+      if (newShareData) {
+        const newShare = newShareData as {
+          ts_code: string;
+          name: string;
+          issue_date: string | null;
+          price: number | null;
+          pe: number | null;
+        };
+
+        console.log(`从 new_share 表获取到新股信息: ${newShare.name}(${tsCode})`);
+
+        // 构建降级的 basic 数据
+        basic = {
+          ts_code: newShare.ts_code,
+          symbol: newShare.ts_code.split('.')[0],
+          name: newShare.name,
+          area: '',
+          industry: '新股',
+          market: newShare.ts_code.includes('.SZ') ? '深市主板' :
+            newShare.ts_code.includes('.SH') ? '沪市主板' :
+              newShare.ts_code.includes('.BJ') ? '北交所' : '',
+          list_date: newShare.issue_date || ''
+        };
+      }
+    }
+
+    // 如果仍然没有基本信息，返回 null
     if (!basic) {
       console.warn('未找到股票基本信息:', tsCode);
       return null;
