@@ -1245,7 +1245,7 @@ export const NEWS_SOURCES = [
   { key: 'futunn', name: '富途牛牛', tableName: 'futunn724_tb', color: '#00B894' },
   { key: 'ifeng', name: '凤凰财经', tableName: 'ifeng724_tb', color: '#E17055' },
   { key: 'jin10qihuo', name: '金十期货', tableName: 'jin10qihuo724_tb', color: '#FDCB6E' },
-  { key: 'chinastar', name: '科创板日报', tableName: 'chinastarmarkettelegraph724_tb', color: '#6C5CE7' },
+  { key: 'chinastar', name: '科创板日报', tableName: 'chinastarmarkettelegraph_tb', color: '#6C5CE7' },
 
   // 其他平台
   { key: 'snowball', name: '雪球', tableName: 'snowball724_tb', color: '#3B82F6' },
@@ -1290,10 +1290,16 @@ function getNewsImportance(title: string, content: string): 'high' | 'normal' {
 
 /**
  * 从单个新闻源获取数据
+ * @param source 新闻源配置
+ * @param limit 获取数量
+ * @param dateStart 可选，日期起始时间戳（秒）
+ * @param dateEnd 可选，日期结束时间戳（秒）
  */
 async function fetchFromSource(
   source: typeof NEWS_SOURCES[0],
-  limit: number
+  limit: number,
+  dateStart?: number,
+  dateEnd?: number
 ): Promise<Array<{
   id: string;
   title: string;
@@ -1307,9 +1313,19 @@ async function fetchFromSource(
   images?: string[];
 }>> {
   try {
-    const { data, error } = await supabaseNews
+    let query = supabaseNews
       .from(source.tableName)
-      .select('id, title, content, display_time, images')
+      .select('id, title, content, display_time, images');
+
+    // 添加日期范围过滤
+    if (dateStart !== undefined) {
+      query = query.gte('display_time', dateStart);
+    }
+    if (dateEnd !== undefined) {
+      query = query.lte('display_time', dateEnd);
+    }
+
+    const { data, error } = await query
       .order('display_time', { ascending: false })
       .limit(limit);
 
@@ -1356,11 +1372,13 @@ async function fetchFromSource(
  * @param params.sources - 指定新闻源key数组，不传则获取全部
  * @param params.limit - 每个源获取的数量，默认30
  * @param params.totalLimit - 返回的最大条数，默认100
+ * @param params.dateFilter - 可选，筛选指定日期的新闻（格式：YYYY-MM-DD）
  */
 export async function fetchRealTimeNews(params: {
   sources?: string[];
   limit?: number;
   totalLimit?: number;
+  dateFilter?: string; // 格式：YYYY-MM-DD
 } = {}): Promise<Array<{
   id: string;
   title: string;
@@ -1373,7 +1391,22 @@ export async function fetchRealTimeNews(params: {
   importance: 'high' | 'normal';
   images?: string[];
 }>> {
-  const { sources, limit = 30, totalLimit = 100 } = params;
+  const { sources, limit = 30, totalLimit = 100, dateFilter } = params;
+
+  // 计算日期范围的时间戳
+  let dateStart: number | undefined;
+  let dateEnd: number | undefined;
+
+  if (dateFilter) {
+    // 解析日期字符串，生成当天的开始和结束时间戳
+    const date = new Date(dateFilter);
+    date.setHours(0, 0, 0, 0);
+    dateStart = Math.floor(date.getTime() / 1000);
+
+    const endDate = new Date(dateFilter);
+    endDate.setHours(23, 59, 59, 999);
+    dateEnd = Math.floor(endDate.getTime() / 1000);
+  }
 
   // 筛选要查询的新闻源
   const targetSources = sources
@@ -1388,7 +1421,7 @@ export async function fetchRealTimeNews(params: {
   try {
     // 并行获取所有源的数据
     const results = await Promise.all(
-      targetSources.map(source => fetchFromSource(source, limit))
+      targetSources.map(source => fetchFromSource(source, limit, dateStart, dateEnd))
     );
 
     // 合并所有数据

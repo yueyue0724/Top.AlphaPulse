@@ -6,12 +6,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Newspaper,
   Zap,
   Building2,
   FileText,
-  Calendar,
+  Calendar as CalendarIcon,
   RefreshCw,
   ChevronDown,
   Radio,
@@ -104,6 +106,30 @@ export function NewsCenter() {
   // 模态框状态
   const [selectedNews, setSelectedNews] = useState<FlashNewsItem | null>(null);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
+  // 日期筛选状态（默认为今天）
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+
+  // 格式化日期为 YYYY-MM-DD 用于 API 调用
+  const formatDateForApi = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // 格式化日期用于显示
+  const formatDateForDisplay = (date: Date): string => {
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    return `${month}月${day}日`;
+  };
+
+  // 计算最近7天可选范围
+  const today = new Date();
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(today.getDate() - 6);
 
   // Realtime 相关状态
   const [realtimeEnabled, setRealtimeEnabled] = useState(true);
@@ -255,10 +281,12 @@ export function NewsCenter() {
 
     try {
       const sources = selectedSource === 'all' ? undefined : [selectedSource];
+      const dateFilter = formatDateForApi(selectedDate);
       const data = await fetchRealTimeNews({
         sources,
         limit: 30, // 每个源获取30条
-        totalLimit: limit
+        totalLimit: limit,
+        dateFilter
       });
 
       setFlashNews(data);
@@ -269,7 +297,7 @@ export function NewsCenter() {
     } finally {
       setLoading(false);
     }
-  }, [selectedSource, flashNews.length]);
+  }, [selectedSource, selectedDate, flashNews.length]);
 
   // 加载更多
   const loadMore = useCallback(async () => {
@@ -279,10 +307,12 @@ export function NewsCenter() {
     try {
       const newLimit = currentLimit + 50;
       const sources = selectedSource === 'all' ? undefined : [selectedSource];
+      const dateFilter = formatDateForApi(selectedDate);
       const data = await fetchRealTimeNews({
         sources,
         limit: 30,
-        totalLimit: newLimit
+        totalLimit: newLimit,
+        dateFilter
       });
 
       setFlashNews(data);
@@ -293,12 +323,12 @@ export function NewsCenter() {
     } finally {
       setLoadingMore(false);
     }
-  }, [currentLimit, selectedSource, loadingMore, hasMore]);
+  }, [currentLimit, selectedSource, selectedDate, loadingMore, hasMore]);
 
-  // 初始加载和切换源时重新加载
+  // 初始加载和切换源或日期时重新加载
   useEffect(() => {
     loadNews(false, 50);
-  }, [selectedSource]);
+  }, [selectedSource, selectedDate]);
 
   // 自动刷新（每30秒）
   useEffect(() => {
@@ -403,20 +433,71 @@ export function NewsCenter() {
             研究报告
           </TabsTrigger>
           <TabsTrigger value="calendar" className="data-[state=active]:bg-white gap-1">
-            <Calendar className="w-4 h-4" />
+            <CalendarIcon className="w-4 h-4" />
             财经日历
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="flash" className="mt-4">
           <Card className="p-4 bg-white border-slate-200">
-            {/* 头部：标题 */}
-            <div className="flex items-center gap-2 mb-4">
-              <Zap className="w-5 h-5 text-yellow-600" />
-              <h3 className="text-lg font-semibold text-slate-900">7×24小时快讯</h3>
-              <span className="text-xs text-slate-500">
-                {flashNews.length > 0 && `(${flashNews.length}条)`}
-              </span>
+            {/* 头部：标题和日期选择器 */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-yellow-600" />
+                <h3 className="text-lg font-semibold text-slate-900">7×24小时快讯</h3>
+                <span className="text-xs text-slate-500">
+                  {flashNews.length > 0 && `(${flashNews.length}条)`}
+                </span>
+              </div>
+
+              {/* 日期选择器 */}
+              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 text-sm font-normal"
+                  >
+                    <CalendarIcon className="w-4 h-4" />
+                    {formatDateForDisplay(selectedDate)}
+                    {selectedDate.toDateString() === today.toDateString() && (
+                      <Badge className="bg-blue-100 text-blue-700 text-xs ml-1">今天</Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        setSelectedDate(date);
+                        setDatePickerOpen(false);
+                      }
+                    }}
+                    disabled={(date) => {
+                      // 只能选择最近7天（包括今天）
+                      const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                      const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                      const sevenDaysAgoOnly = new Date(sevenDaysAgo.getFullYear(), sevenDaysAgo.getMonth(), sevenDaysAgo.getDate());
+                      return dateOnly > todayOnly || dateOnly < sevenDaysAgoOnly;
+                    }}
+                    className="p-6 [--cell-size:3rem] text-base"
+                    formatters={{
+                      formatCaption: (date) => {
+                        const year = date.getFullYear();
+                        const month = date.getMonth() + 1;
+                        return `${year}年${month}月`;
+                      },
+                      formatWeekdayName: (date) => {
+                        const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+                        return weekdays[date.getDay()];
+                      },
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* 新消息提示条 */}
@@ -699,7 +780,7 @@ export function NewsCenter() {
         <TabsContent value="calendar" className="mt-4">
           <Card className="p-4 bg-white border-slate-200">
             <div className="flex items-center gap-2 mb-4">
-              <Calendar className="w-5 h-5 text-green-600" />
+              <CalendarIcon className="w-5 h-5 text-green-600" />
               <h3 className="text-lg font-semibold text-slate-900">财经日历</h3>
               <span className="text-xs text-slate-400">(示例数据，待接入)</span>
             </div>
