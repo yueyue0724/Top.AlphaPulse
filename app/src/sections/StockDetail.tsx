@@ -141,11 +141,11 @@ function StockDetailView({
     async function loadData() {
       setLoading(true);
       try {
-        const [detail, kline, moneyFlow, timeSeries] = await Promise.all([
+        // 先并行获取基础数据
+        const [detail, kline, moneyFlow] = await Promise.all([
           fetchStockFullDetail(stockCode),
           fetchKLineData(stockCode, 60),
           fetchStockMoneyFlow(stockCode, 5),
-          fetchTimeSeriesData(stockCode)
         ]);
 
         if (detail) {
@@ -157,6 +157,10 @@ function StockDetailView({
         if (moneyFlow) {
           setMoneyFlowData(moneyFlow);
         }
+
+        // 用 pre_close 获取分时数据（模拟数据会基于此价格生成）
+        const preClose = (detail as StockDetailData)?.pre_close || 0;
+        const timeSeries = await fetchTimeSeriesData(stockCode, preClose || undefined);
         if (timeSeries) {
           setTimeSeriesData(timeSeries);
         }
@@ -329,6 +333,8 @@ function StockDetailView({
               data={timeSeriesData}
               preClose={stockData.pre_close || 0}
               className="h-96"
+              stockName={stockData.name}
+              stockCode={stockData.ts_code}
             />
           ) : (
             kLineData.length > 0 ? (

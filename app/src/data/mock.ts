@@ -128,20 +128,20 @@ export function generateKLineData(days: number = 60): Array<{ date: string; open
   const data = [];
   let basePrice = 50;
   const now = new Date();
-  
+
   for (let i = days; i >= 0; i--) {
     const date = new Date(now);
     date.setDate(date.getDate() - i);
-    
+
     const change = (Math.random() - 0.48) * 4;
     basePrice = Math.max(10, basePrice * (1 + change / 100));
-    
+
     const open = basePrice * (1 + (Math.random() - 0.5) * 0.02);
     const close = basePrice;
     const high = Math.max(open, close) * (1 + Math.random() * 0.02);
     const low = Math.min(open, close) * (1 - Math.random() * 0.02);
     const volume = Math.floor(Math.random() * 1000000) + 500000;
-    
+
     data.push({
       date: date.toISOString().split('T')[0],
       open: Number(open.toFixed(2)),
@@ -151,33 +151,41 @@ export function generateKLineData(days: number = 60): Array<{ date: string; open
       volume: volume
     });
   }
-  
+
   return data;
 }
 
 // 分时数据生成器
-export function generateTimeSeriesData(): Array<{ time: string; price: number; volume: number; avg_price: number }> {
+export function generateTimeSeriesData(preClose?: number): Array<{ time: string; price: number; volume: number; avg_price: number }> {
   const data = [];
-  let price = 50;
-  const basePrice = 49.5;
-  
+  const basePrice = preClose || 50;
+  let price = basePrice * (1 + (Math.random() - 0.5) * 0.005); // 从昨收附近开始
+  let cumulativeAmount = 0;
+  let cumulativeVolume = 0;
+
   for (let hour = 9; hour <= 15; hour++) {
     for (let minute = (hour === 9 ? 30 : 0); minute < 60; minute += 1) {
       if (hour === 11 && minute > 30) continue;
       if (hour === 12) continue;
       if (hour === 15 && minute > 0) break;
-      
-      const change = (Math.random() - 0.5) * 0.2;
-      price = Math.max(basePrice * 0.98, Math.min(basePrice * 1.02, price + change));
-      
+
+      // 模拟价格波动（限制在 ±3% 以内）
+      const change = (Math.random() - 0.5) * basePrice * 0.003;
+      price = Math.max(basePrice * 0.97, Math.min(basePrice * 1.03, price + change));
+
+      const vol = Math.floor(Math.random() * 10000) + 1000;
+      cumulativeVolume += vol;
+      cumulativeAmount += vol * price;
+      const avg_price = cumulativeVolume > 0 ? cumulativeAmount / cumulativeVolume : price;
+
       data.push({
         time: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
         price: Number(price.toFixed(2)),
-        volume: Math.floor(Math.random() * 10000) + 1000,
-        avg_price: Number((basePrice * (1 + (Math.random() - 0.5) * 0.01)).toFixed(2))
+        volume: vol,
+        avg_price: Number(avg_price.toFixed(2))
       });
     }
   }
-  
+
   return data;
 }

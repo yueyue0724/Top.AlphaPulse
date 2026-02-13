@@ -2380,7 +2380,7 @@ export async function fetchStockMoneyFlow(tsCode: string, days = 5) {
  * 获取分时数据
  * 从 realtime_quote_cache 表获取当日分时数据
  */
-export async function fetchTimeSeriesData(tsCode: string) {
+export async function fetchTimeSeriesData(tsCode: string, preClose?: number) {
   try {
     // 获取当日日期 (YYYYMMDD 格式)
     const today = new Date();
@@ -2395,7 +2395,7 @@ export async function fetchTimeSeriesData(tsCode: string) {
 
     if (error) {
       console.warn('获取分时数据失败:', error);
-      return generateTimeSeriesData();
+      return generateTimeSeriesData(preClose);
     }
 
     if (data && data.length > 0) {
@@ -2431,10 +2431,10 @@ export async function fetchTimeSeriesData(tsCode: string) {
 
     // 降级到模拟数据
     console.log('无分时数据，使用模拟数据');
-    return generateTimeSeriesData();
+    return generateTimeSeriesData(preClose);
   } catch (error) {
     console.error('获取分时数据失败:', error);
-    return generateTimeSeriesData();
+    return generateTimeSeriesData(preClose);
   }
 }
 
