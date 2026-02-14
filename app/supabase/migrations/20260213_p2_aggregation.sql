@@ -372,6 +372,10 @@ begin
     'hsgtTop10', v_hsgt_top10,
     'updateTime', to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
   );
+exception
+  when others then
+    -- 任一子查询失败时返回 NULL，前端会自动走降级聚合逻辑，避免 RPC 400
+    return null;
 end;
 $$;
 
